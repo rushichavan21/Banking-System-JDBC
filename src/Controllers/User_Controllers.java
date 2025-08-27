@@ -1,5 +1,7 @@
 package Controllers;
 
+import Pages.Accounts_page;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -42,22 +44,23 @@ public class User_Controllers {
             throw new RuntimeException(e);
         }
     }
+// just creates an entry in the user_data table and thus a userId will be provided.
+// It's not mandatory for the user to like open the new account while registering.
+// After registering user can create one or more accounts;
 
-    public static boolean user_register(Connection con) {
+    public static void user_register(Connection con) {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter username: ");
         String username = sc.nextLine();
 
         if (user_exists(con, username)) {
             System.out.println("User already exists");
-            return false;
+            return;
         }
 
         System.out.println("Enter password: ");
         String password = sc.nextLine();
 
-        System.out.println("Enter the Initial Amount: ");
-        double initial_balance = sc.nextDouble();
 
         try {
             String insertUser = "INSERT INTO user_data (username, password_hash) VALUES (?, ?)";
@@ -68,7 +71,7 @@ public class User_Controllers {
 
                 if (rows == 0) {
                     System.out.println("User register failed");
-                    return false;
+                    return;
                 }
 
 
@@ -79,16 +82,39 @@ public class User_Controllers {
                     }
                 }
 
-                String insertAccount = "INSERT INTO account_details (user_id, account_number, balance) VALUES (?, ?, ?)";
-                try (PreparedStatement ps2 = con.prepareStatement(insertAccount)) {
-                    ps2.setInt(1, userId);
-                    ps2.setLong(2, System.currentTimeMillis());
-                    ps2.setDouble(3, initial_balance);
-                    ps2.executeUpdate();
-                }
-
                 System.out.println("User register success");
-                return true;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void login(Connection con) {
+        Scanner sc = new Scanner(System.in);
+        UI_Controllers.CreatePartition();
+        System.out.println("Welcome to the login page");
+        System.out.println("Enter the Username :");
+        String username = sc.nextLine();
+        System.out.println("Enter Password :");
+        String password = sc.nextLine();
+        String Query ="Select * from user_data where username = ?;";
+        try(PreparedStatement ps = con.prepareStatement(Query)) {
+            ps.setString(1, username);
+
+            try(ResultSet rs = ps.executeQuery()){
+
+            if(rs.next()) {
+                if(rs.getString("password_hash").equals(password)) {
+                    System.out.println("Login success");
+                    int user_id=rs.getInt("user_id");
+
+                    Accounts_page.AccountsStart(con,user_id);
+                }else{
+                    System.out.println("Invalid Password");
+                }
+            }else{
+                System.out.println("Username :" + username + " is not registered , Please register before login.");
+            }
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
